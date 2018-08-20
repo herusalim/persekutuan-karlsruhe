@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<cronentries>
+  <cron>
+    <url>/tasks/calendargen</url>
+    <description>Generate Jadwal Persekutuan</description>
+    <schedule>every day 00:00</schedule> 
+    <retry-parameters>
+      <min-backoff-seconds>2</min-backoff-seconds>
+      <max-doublings>5</max-doublings>
+    </retry-parameters>
+  </cron>
+   
+  <!-- 6/7 AM waktu jerman -->
+  <cron>
+    <url>/tasks/remindpelayanan</url>
+    <description>Kirim Reminder Pelayanan</description>
+    <schedule>every day 05:00</schedule> <!-- UTC -->
+    <retry-parameters>
+      <min-backoff-seconds>2</min-backoff-seconds>
+      <max-doublings>5</max-doublings>
+    </retry-parameters>
+  </cron>
+  
+  <!-- 8 AM waktu singapur -->
+  <cron>
+    <url>/tasks/remindpelayanan/ivena</url>
+    <description>Kirim Reminder Pelayanan untuk Persekutuan Ivena</description>
+    <schedule>every day 00:00</schedule>
+    <retry-parameters>
+      <min-backoff-seconds>2</min-backoff-seconds>
+      <max-doublings>5</max-doublings>
+    </retry-parameters>
+  </cron>
+  
+  <cron>
+    <url>/tasks/remindpersekutuan</url>
+    <description>Kirim Reminder Persekutuan</description>
+    <schedule>every day 06:00</schedule> <!-- UTC -->
+    <retry-parameters>
+      <min-backoff-seconds>2</min-backoff-seconds>
+      <max-doublings>5</max-doublings>
+    </retry-parameters>
+  </cron>
+  
+  <cron>
+    <url>/tasks/removeexpiredreminder</url>
+    <description>Menghapus reminder (yang sudah lewat) dari datastore</description>
+    <schedule>every sunday 00:00</schedule> <!-- UTC -->
+    <retry-parameters>
+      <min-backoff-seconds>2</min-backoff-seconds>
+      <max-doublings>5</max-doublings>
+    </retry-parameters>
+  </cron>
+  
+</cronentries>

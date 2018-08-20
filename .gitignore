@@ -1,0 +1,12 @@
+.project
+.classpath
+.settings
+eclipse-launch-profiles
+keys
+target
+src/main/resources/Mailjet_API_KEY
+src/main/resources/Mailjet_API_SECRET
+
+src/main/resources/client_secret.json
+
+src/main/resources/appl_client_secret.json

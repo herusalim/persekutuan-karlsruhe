@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<web-app
+        version="2.5"
+        xmlns="http://java.sun.com/xml/ns/javaee"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://java.sun.com/xml/ns/javaee http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd">
+        
+    <servlet>
+    <servlet-name>dispatcher</servlet-name>
+    <servlet-class>org.springframework.web.servlet.DispatcherServlet</servlet-class>
+    <init-param>
+        <param-name>contextConfigLocation</param-name>
+        <param-value>WEB-INF/spring/spring-servlet-context.xml</param-value>
+    </init-param>
+    <load-on-startup>1</load-on-startup>
+	</servlet>
+	<servlet-mapping>
+	    <servlet-name>dispatcher</servlet-name>
+	    <url-pattern>/</url-pattern>
+	</servlet-mapping>
+	
+	<servlet>
+	    <servlet-name>generateCalendarTask</servlet-name>
+	    <servlet-class>org.persekutuankarlsruhe.webapp.tasks.GenerateCalendarServlet</servlet-class>
+	</servlet>
+	<servlet-mapping>
+	    <servlet-name>generateCalendarTask</servlet-name>
+	    <url-pattern>/tasks/calendargen</url-pattern>
+	</servlet-mapping>
+    
+    <security-constraint>
+        <web-resource-collection>
+            <web-resource-name>calendargen</web-resource-name>
+            <url-pattern>/calendargen</url-pattern>
+        </web-resource-collection>
+        <auth-constraint>
+            <role-name>admin</role-name>
+        </auth-constraint>
+    </security-constraint>
+ 
+    <security-constraint>
+        <web-resource-collection>
+            <web-resource-name>tasks</web-resource-name>
+            <url-pattern>/tasks/*</url-pattern>
+        </web-resource-collection>
+        <auth-constraint>
+            <role-name>admin</role-name>
+        </auth-constraint>
+    </security-constraint>
+    
+    <servlet>
+      <servlet-name>bouncehandler</servlet-name>
+      <servlet-class>org.persekutuankarlsruhe.webapp.email.BounceHandlerServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+      <servlet-name>bouncehandler</servlet-name>
+      <url-pattern>/_ah/bounce</url-pattern>
+    </servlet-mapping>
+    <security-constraint>
+      <web-resource-collection>
+        <web-resource-name>bounce</web-resource-name>
+        <url-pattern>/_ah/bounce</url-pattern>
+      </web-resource-collection>
+      <auth-constraint>
+        <role-name>admin</role-name>
+      </auth-constraint>
+    </security-constraint>
+	
+	<security-constraint>
+        <web-resource-collection>
+            <web-resource-name>admin</web-resource-name>
+            <url-pattern>/admin/*</url-pattern>
+        </web-resource-collection>
+        <web-resource-collection>
+            <web-resource-name>adminRoot</web-resource-name>
+            <url-pattern>/admin</url-pattern>
+        </web-resource-collection>
+        <auth-constraint>
+            <role-name>admin</role-name>
+        </auth-constraint>
+    </security-constraint>
+    
+</web-app>
