@@ -9,6 +9,7 @@ import org.persekutuankarlsruhe.webapp.email.IEmailService;
 import org.persekutuankarlsruhe.webapp.sheets.JadwalPelayanan;
 import org.persekutuankarlsruhe.webapp.sheets.Orang;
 import org.persekutuankarlsruhe.webapp.sheets.Pelayanan;
+import org.persekutuankarlsruhe.webapp.sheets.SheetsDataProvider;
 
 public class PersekutuanReminderDataProvider implements IReminderDataProvider {
 
@@ -97,6 +98,16 @@ public class PersekutuanReminderDataProvider implements IReminderDataProvider {
 	@Override
 	public String getSenderEmail() {
 		return IEmailService.EMAIL_PERSEKUTUAN_ADDRESS;
+	}
+
+	@Override
+	public Orang getAdmin() {
+		return new Orang("Heru", "herumartinus.salim@yahoo.de");
+	}
+
+	@Override
+	public String getSheetIdDaftarAnggota() {
+		return SheetsDataProvider.SPREADSHEET_ID_DAFTAR_ANGGOTA;
 	}
 
 }

@@ -9,5 +9,7 @@ public interface IReminderDataProvider {
     public String getMailTextHtml(JadwalPelayanan jadwal, Orang orang, String pelayanan);
     public String getSenderName();
 	public String getSenderEmail();
+	public Orang getAdmin();
+	public String getSheetIdDaftarAnggota();
 
 }

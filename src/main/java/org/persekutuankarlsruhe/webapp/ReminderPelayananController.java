@@ -2,6 +2,7 @@ package org.persekutuankarlsruhe.webapp;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -117,12 +118,14 @@ public class ReminderPelayananController {
 
 		Map<Orang, Set<Pelayanan>> daftarPelayananPerOrang = getDaftarPelayananPerOrang(jadwal);
 
+		Set<Orang> missingEmails = new HashSet<Orang>();
 		for (Entry<Orang, Set<Pelayanan>> pelayananPerOrang : daftarPelayananPerOrang.entrySet()) {
 			Orang petugas = pelayananPerOrang.getKey();
 			Set<Pelayanan> daftarJenisPelayanan = pelayananPerOrang.getValue();
 
 			if (perluKirimReminder(reminderType, daftarJenisPelayanan)) {
 				if (StringUtils.isEmpty(petugas.getEmail()) && petugas.getNama().length() > 2) {
+					missingEmails.add(petugas);
 					LOG.warning(petugas.getNama() + " tidak memiliki alamat email!!! Tidak bisa mengirim reminder.");
 					continue;
 				}
@@ -146,7 +149,56 @@ public class ReminderPelayananController {
 			}
 		}
 
+		if (missingEmails.size() > 0) {
+			sendInfoMissingEmails(missingEmails, reminderProvider);
+		}
+
 		return reminderTerkirim;
+	}
+
+	private void sendInfoMissingEmails(Set<Orang> missingEmails, IReminderDataProvider reminderProvider) {
+		String subject = "[WARN] Email petugas yang belum terdaftar!";
+		LOG.info("Mengirim info missing email: " + missingEmails);
+
+		String info = "Email dari petugas-petugas berikut ini belum terdaftar:";
+		StringBuffer textMessage = new StringBuffer("Hallo " + reminderProvider.getAdmin().getNama() + ",\n\n");
+		textMessage.append(info + "\n");
+		for (Orang orang : missingEmails) {
+			textMessage.append("- " + orang.getNama() + "\n");
+		}
+		String googleSheetUrl = getGoogleSheetUrl(reminderProvider.getSheetIdDaftarAnggota());
+		textMessage.append("\nLink Daftar Anggota: " + googleSheetUrl);
+		textMessage.append("\n\n");
+		textMessage.append("Salam,\n");
+		textMessage.append("Mail Service Persekutuan");
+
+		StringBuffer htmlMessage = new StringBuffer("Hallo " + reminderProvider.getAdmin().getNama() + ",<br/><br/>");
+		htmlMessage.append(info + "<br/>");
+		htmlMessage.append("<ul>");
+		for (Orang orang : missingEmails) {
+			htmlMessage.append("<li>" + orang.getNama() + "</li>");
+		}
+		htmlMessage.append("</ul>");
+		htmlMessage.append("<br/><br/>Link Daftar Anggota: <a href=\"" + googleSheetUrl + "\">Link</a>");
+		htmlMessage.append(
+				"<br/>Atau buka URL ini di browser kalau link tidak berfungsi: " + googleSheetUrl + "<br/><br/>");
+		htmlMessage.append("Salam,<br/>");
+		htmlMessage.append("Mail Service Persekutuan");
+
+		MailjetEmailService emailService = (MailjetEmailService) getEmailService();
+		emailService.setSenderName(reminderProvider.getSenderName());
+		emailService.setSenderEmail(reminderProvider.getSenderEmail());
+		try {
+			emailService.sendEmail(subject, textMessage.toString(), htmlMessage.toString(),
+					Collections.singletonList(reminderProvider.getAdmin()));
+		} catch (EmailSendFailedException e) {
+			throw new IllegalStateException(e);
+		}
+
+	}
+
+	private String getGoogleSheetUrl(String sheetId) {
+		return "https://docs.google.com/spreadsheets/d/" + sheetId + "/edit";
 	}
 
 	/**

@@ -62,4 +62,13 @@ public class Orang implements Serializable {
 			return super.equals(obj);
 		}
 	}
+
+	@Override
+	public int hashCode() {
+		String aliasString = "";
+		for (String alias : aliases) {
+			aliasString += alias;
+		}
+		return (toString() + "Alias:" + aliasString).hashCode();
+	}
 }
