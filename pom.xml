@@ -9,14 +9,14 @@
     <artifactId>persekutuan-webapp</artifactId>
 
     <properties>
-        <app.id>your-app-id</app.id>
+        <app.id>persekutuan-karlsruhe</app.id>
         <app.version>1</app.version>
         <appengine.version>1.9.54</appengine.version>
         <gcloud.plugin.version>1</gcloud.plugin.version>
 
         <objectify.version>5.1.13</objectify.version>
         <guava.version>18.0</guava.version>
-		<spring.version>4.3.2.RELEASE</spring.version>
+		<spring.version>5.0.6.RELEASE</spring.version>
 
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
@@ -201,6 +201,9 @@
 				<groupId>com.google.cloud.tools</groupId>
 				<artifactId>appengine-maven-plugin</artifactId>
 				<version>${appengine-maven-plugin-version}</version>
+			    <configuration>
+			      <project>${app.id}</project>
+			    </configuration>
 			</plugin>
 			<!-- 
             <plugin>

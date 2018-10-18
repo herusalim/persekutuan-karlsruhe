@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.persekutuankarlsruhe.webapp.calendar.CalendarUtil;
@@ -148,7 +149,9 @@ public class ReminderPelayananController {
 				}
 			}
 		}
-
+		if (LOG.isLoggable(Level.FINE)) {
+			LOG.fine("Missing emails count: " + missingEmails.size());
+		}
 		if (missingEmails.size() > 0) {
 			sendInfoMissingEmails(missingEmails, reminderProvider);
 		}
@@ -189,6 +192,7 @@ public class ReminderPelayananController {
 		emailService.setSenderName(reminderProvider.getSenderName());
 		emailService.setSenderEmail(reminderProvider.getSenderEmail());
 		try {
+			LOG.info("Sending missing emails (" + missingEmails.size() + ") info to: " + reminderProvider.getAdmin());
 			emailService.sendEmail(subject, textMessage.toString(), htmlMessage.toString(),
 					Collections.singletonList(reminderProvider.getAdmin()));
 		} catch (EmailSendFailedException e) {
