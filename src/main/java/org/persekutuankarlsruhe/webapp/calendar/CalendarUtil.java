@@ -71,7 +71,7 @@ public class CalendarUtil {
 	private static String getPetugasAsString(Pelayanan jenisPelayanan, Map<Pelayanan, List<Orang>> daftarPelayanan) {
 		List<Orang> daftarPetugas = daftarPelayanan.get(jenisPelayanan);
 		String value = jenisPelayanan.getNama() + ": ";
-		
+
 		if (daftarPetugas == null) {
 			value = "[Tidak Ada]";
 		} else {

@@ -63,6 +63,15 @@
 		<td>Tampilkan Pertanyaan (Admin)</td>
 	</tr>
 </table>
+
+<h2>Feedback</h2>
+<table class="w3-table-all">
+	<tr>
+		<td><a href="/feedback">/feedback</a></td>
+		<td>Kirim feedback</td>
+	</tr>
+</table>
+
 <h2>Cron Jobs</h2>
 <table class="w3-table-all">
 	<tr>

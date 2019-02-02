@@ -201,7 +201,7 @@ public class SheetsDataProvider {
 
 		String defaultLokasi = getDefaultLokasi(rawDataList);
 
-		List<JadwalPelayanan> daftarJadwalPelayanan = extractJadwalPelayanan(rawDataList, defaultLokasi);
+		List<JadwalPelayanan> daftarJadwalPelayanan = extractJadwalPelayanan(rawDataList, defaultLokasi, true);
 
 		for (ValueRange rawData : rawDataList) {
 			if (rangeJadwalPelayanan.equals(rawData.getRange())) {
@@ -213,8 +213,25 @@ public class SheetsDataProvider {
 		return daftarJadwalPelayanan;
 	}
 
-	protected List<JadwalPelayanan> extractJadwalPelayanan(List<ValueRange> rawDataList, String defaultLokasi)
-			throws IOException {
+	public List<JadwalPelayanan> getDaftarJadwalPelayananFromSheetsFromBeginning() throws IOException {
+
+		List<ValueRange> rawDataList = getDaftarJadwalPelayananRaw();
+
+		String defaultLokasi = getDefaultLokasi(rawDataList);
+
+		List<JadwalPelayanan> daftarJadwalPelayanan = extractJadwalPelayanan(rawDataList, defaultLokasi, false);
+		for (ValueRange rawData : rawDataList) {
+			if (rangeJadwalPelayanan.equals(rawData.getRange())) {
+			} else if (rangeDefaultLokasi.equals(rawData.getRange())) {
+
+			}
+		}
+
+		return daftarJadwalPelayanan;
+	}
+
+	protected List<JadwalPelayanan> extractJadwalPelayanan(List<ValueRange> rawDataList, String defaultLokasi,
+			boolean futureOnly) throws IOException {
 		List<JadwalPelayanan> daftarJadwalPelayanan = new ArrayList<JadwalPelayanan>();
 		for (ValueRange rawData : rawDataList) {
 			if (rangeJadwalPelayanan.equals(rawData.getRange())) {
@@ -253,10 +270,9 @@ public class SheetsDataProvider {
 									indexLokasi, daftarOrang, defaultLokasi);
 							String bahanRenungan = jadwalPelayanan.getBahanRenungan();
 
-							// Hanya jadwal di masa mendatang
-							if (CalendarUtil.getJadwalTimeValue(jadwalPelayanan) > now.getTimeInMillis()) {
-
-								if (jadwalPelayanan.getTanggal().after(now.getTime())
+							if (!futureOnly
+									|| CalendarUtil.getJadwalTimeValue(jadwalPelayanan) > now.getTimeInMillis()) {
+								if ((!futureOnly || jadwalPelayanan.getTanggal().after(now.getTime()))
 										&& !StringUtils.isEmpty(bahanRenungan)) {
 									if (LOG.isLoggable(Level.FINE)) {
 										LOG.fine("Menambahkan jadwal berikut ke daftar: " + jadwalPelayanan);
