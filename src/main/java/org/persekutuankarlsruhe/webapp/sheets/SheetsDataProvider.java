@@ -51,9 +51,9 @@ public class SheetsDataProvider {
 	 */
 	public static final String SPREADSHEET_ID_DAFTAR_ANGGOTA = "1-sKoLqR3MRd8-dtkAiaOe5fy5FMOsU4zjWoA7kc7LMA";
 
-	private static final String RANGE_DEFAULT_LOKASI = SHEET_NAME_JADWAL + "!H1";
+	private static final String RANGE_DEFAULT_LOKASI = SHEET_NAME_JADWAL + "!I1";
 
-	private static final String RANGE_JADWAL_PELAYANAN = SHEET_NAME_JADWAL + "!A2:H31";
+	private static final String RANGE_JADWAL_PELAYANAN = SHEET_NAME_JADWAL + "!A2:I31";
 	/**
 	 * {@linkplain https://docs.google.com/spreadsheets/d/16qC7KZ-nAdLKtqp59uKfMg8i1R5DWU1BX2h8hlDq3FM/edit}
 	 */
