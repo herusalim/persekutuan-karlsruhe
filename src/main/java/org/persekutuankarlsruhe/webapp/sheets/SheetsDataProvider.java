@@ -328,7 +328,11 @@ public class SheetsDataProvider {
 	}
 
 	private Pelayanan ubahKeJenisPelayanan(String value) {
-		return Pelayanan.fromName(value);
+		Pelayanan jenisPelayanan = Pelayanan.fromName(value);
+		if(jenisPelayanan==null) {
+			throw new IllegalArgumentException("Jenis pelayanan tidak dikenal: \"" + value + "\"");
+		}
+		return jenisPelayanan;
 	}
 
 	private String getDefaultLokasi(List<ValueRange> rawDataList) {
