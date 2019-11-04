@@ -10,3 +10,8 @@ target
 src/main/resources/client_secret.json
 
 src/main/resources/appl_client_secret.json
+/.idea/misc.xml
+/.idea/modules.xml
+/.idea/persekutuan.iml
+/.idea/vcs.xml
+/.idea/workspace.xml
