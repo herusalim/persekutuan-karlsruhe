@@ -1,27 +1,12 @@
 package org.persekutuankarlsruhe.webapp;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
+import com.google.appengine.api.datastore.EntityNotFoundException;
+import com.google.apphosting.api.ApiProxy;
 import org.persekutuankarlsruhe.webapp.calendar.CalendarUtil;
 import org.persekutuankarlsruhe.webapp.email.EmailSendFailedException;
 import org.persekutuankarlsruhe.webapp.email.IEmailService;
 import org.persekutuankarlsruhe.webapp.email.MailjetEmailService;
-import org.persekutuankarlsruhe.webapp.remindpelayanan.IReminderDataProvider;
-import org.persekutuankarlsruhe.webapp.remindpelayanan.PersekutuanReminderDataProvider;
-import org.persekutuankarlsruhe.webapp.remindpelayanan.PersekutuanReminderDataProviderForIvena;
-import org.persekutuankarlsruhe.webapp.remindpelayanan.ReminderPelayananDatastore;
-import org.persekutuankarlsruhe.webapp.remindpelayanan.ReminderTerkirim;
-import org.persekutuankarlsruhe.webapp.remindpelayanan.ReminderType;
+import org.persekutuankarlsruhe.webapp.remindpelayanan.*;
 import org.persekutuankarlsruhe.webapp.sheets.JadwalPelayanan;
 import org.persekutuankarlsruhe.webapp.sheets.Orang;
 import org.persekutuankarlsruhe.webapp.sheets.Pelayanan;
@@ -34,257 +19,263 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 
-import com.google.appengine.api.datastore.EntityNotFoundException;
-import com.google.apphosting.api.ApiProxy;
+import java.util.*;
+import java.util.Map.Entry;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 @Controller
 public class ReminderPelayananController {
 
-	private static final Logger LOG = Logger.getLogger(ReminderPelayananController.class.getName());
+    private static final Logger LOG = Logger.getLogger(ReminderPelayananController.class.getName());
 
-	private IEmailService emailService;
+    private IEmailService emailService;
 
-	private ReminderPelayananDatastore reminderDatastore = ReminderPelayananDatastore.getInstance();
+    private ReminderPelayananDatastore reminderDatastore = ReminderPelayananDatastore.getInstance();
 
-	@ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
-	@ExceptionHandler({ ApiProxy.ApiDeadlineExceededException.class })
-	public String googleTimeoutError() {
-		return "timeout_google_service";
-	}
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    @ExceptionHandler({ApiProxy.ApiDeadlineExceededException.class})
+    public String googleTimeoutError() {
+        return "timeout_google_service";
+    }
 
-	@RequestMapping(value = "/tasks/remindpelayanan")
-	public String remindPelayanan(Model model) throws Exception {
-		SheetsDataProvider dataProvider = SheetsDataProvider.createProviderForPersekutuan();
-		List<JadwalPelayanan> daftarPelayanan = dataProvider.getDaftarJadwalPelayananFromSheets();
-		List<ReminderTerkirim> daftarTerkirim = new ArrayList<ReminderTerkirim>();
-		IReminderDataProvider reminderProvider = new PersekutuanReminderDataProvider();
+    @RequestMapping(value = "/tasks/remindpelayanan")
+    public String remindPelayanan(Model model) throws Exception {
+        SheetsDataProvider dataProvider = SheetsDataProvider.createProviderForPersekutuan();
+        List<JadwalPelayanan> daftarPelayanan = dataProvider.getDaftarJadwalPelayananFromSheets();
+        List<ReminderTerkirim> daftarTerkirim = new ArrayList<ReminderTerkirim>();
+        IReminderDataProvider reminderProvider = new PersekutuanReminderDataProvider();
 
-		JadwalPelayanan jadwalDalamDuaMinggu = CalendarUtil.getJadwalTerdekatDalamBbrpHari(daftarPelayanan, 7, 14);
-		if (jadwalDalamDuaMinggu != null) {
-			daftarTerkirim.add(sendEmailReminder(jadwalDalamDuaMinggu, ReminderType.SPECIAL, reminderProvider));
-		}
+        if (daftarPelayanan.size() == 0) {
+            LOG.warning("Tidak ada daftar pelayanan yang ditemukan (" + SheetsDataProvider.RANGE_JADWAL_PELAYANAN + ")!!! Update jadwal pelayanan!");
+        }
 
-		JadwalPelayanan jadwalDalamTujuhHari = CalendarUtil.getJadwalTerdekatDalamBbrpHari(daftarPelayanan, 2, 7);
-		if (jadwalDalamTujuhHari != null) {
-			daftarTerkirim.add(sendEmailReminder(jadwalDalamTujuhHari, ReminderType.FIRST, reminderProvider));
-		}
+        JadwalPelayanan jadwalDalamDuaMinggu = CalendarUtil.getJadwalTerdekatDalamBbrpHari(daftarPelayanan, 7, 14);
+        if (jadwalDalamDuaMinggu != null) {
+            daftarTerkirim.add(sendEmailReminder(jadwalDalamDuaMinggu, ReminderType.SPECIAL, reminderProvider));
+        }
 
-		JadwalPelayanan jadwalDalamDuaHari = CalendarUtil.getJadwalTerdekatDalamBbrpHari(daftarPelayanan, 0, 2);
-		if (jadwalDalamDuaHari != null) {
-			daftarTerkirim.add(sendEmailReminder(jadwalDalamDuaHari, ReminderType.SECOND, reminderProvider));
-		}
+        JadwalPelayanan jadwalDalamTujuhHari = CalendarUtil.getJadwalTerdekatDalamBbrpHari(daftarPelayanan, 2, 7);
+        if (jadwalDalamTujuhHari != null) {
+            daftarTerkirim.add(sendEmailReminder(jadwalDalamTujuhHari, ReminderType.FIRST, reminderProvider));
+        }
 
-		model.addAttribute("daftarTerkirim", daftarTerkirim);
+        JadwalPelayanan jadwalDalamDuaHari = CalendarUtil.getJadwalTerdekatDalamBbrpHari(daftarPelayanan, 0, 2);
+        if (jadwalDalamDuaHari != null) {
+            daftarTerkirim.add(sendEmailReminder(jadwalDalamDuaHari, ReminderType.SECOND, reminderProvider));
+        }
 
-		return "reminder_pelayanan_summary";
-	}
+        model.addAttribute("daftarTerkirim", daftarTerkirim);
 
-	@RequestMapping(value = "/tasks/remindpelayanan/ivena")
-	public String remindPelayananForIvena(Model model) throws Exception {
-		SheetsDataProvider dataProvider = SheetsDataProvider.createProviderForPersekutuanIvena();
+        return "reminder_pelayanan_summary";
+    }
 
-		List<JadwalPelayanan> daftarPelayanan = dataProvider.getDaftarJadwalPelayananFromSheets();
-		List<ReminderTerkirim> daftarTerkirim = new ArrayList<ReminderTerkirim>();
-		IReminderDataProvider reminderProvider = new PersekutuanReminderDataProviderForIvena();
+    @RequestMapping(value = "/tasks/remindpelayanan/ivena")
+    public String remindPelayananForIvena(Model model) throws Exception {
+        SheetsDataProvider dataProvider = SheetsDataProvider.createProviderForPersekutuanIvena();
 
-		// JadwalPelayanan jadwalDalamDuaMinggu =
-		// CalendarUtil.getJadwalTerdekatDalamBbrpHari(daftarPelayanan, 7, 14);
-		// if (jadwalDalamDuaMinggu != null) {
-		// daftarTerkirim.add(sendEmailReminder(jadwalDalamDuaMinggu,
-		// ReminderType.SPECIAL, reminderProvider));
-		// }
+        List<JadwalPelayanan> daftarPelayanan = dataProvider.getDaftarJadwalPelayananFromSheets();
+        List<ReminderTerkirim> daftarTerkirim = new ArrayList<ReminderTerkirim>();
+        IReminderDataProvider reminderProvider = new PersekutuanReminderDataProviderForIvena();
 
-		JadwalPelayanan jadwalDalamTujuhHari = CalendarUtil.getJadwalTerdekatDalamBbrpHari(daftarPelayanan, 2, 7);
-		if (jadwalDalamTujuhHari != null) {
-			daftarTerkirim.add(sendEmailReminder(jadwalDalamTujuhHari, ReminderType.FIRST, reminderProvider));
-		}
+        // JadwalPelayanan jadwalDalamDuaMinggu =
+        // CalendarUtil.getJadwalTerdekatDalamBbrpHari(daftarPelayanan, 7, 14);
+        // if (jadwalDalamDuaMinggu != null) {
+        // daftarTerkirim.add(sendEmailReminder(jadwalDalamDuaMinggu,
+        // ReminderType.SPECIAL, reminderProvider));
+        // }
 
-		JadwalPelayanan jadwalDalamDuaHari = CalendarUtil.getJadwalTerdekatDalamBbrpHari(daftarPelayanan, 0, 2);
-		if (jadwalDalamDuaHari != null) {
-			daftarTerkirim.add(sendEmailReminder(jadwalDalamDuaHari, ReminderType.SECOND, reminderProvider));
-		}
+        JadwalPelayanan jadwalDalamTujuhHari = CalendarUtil.getJadwalTerdekatDalamBbrpHari(daftarPelayanan, 2, 7);
+        if (jadwalDalamTujuhHari != null) {
+            daftarTerkirim.add(sendEmailReminder(jadwalDalamTujuhHari, ReminderType.FIRST, reminderProvider));
+        }
 
-		model.addAttribute("daftarTerkirim", daftarTerkirim);
+        JadwalPelayanan jadwalDalamDuaHari = CalendarUtil.getJadwalTerdekatDalamBbrpHari(daftarPelayanan, 0, 2);
+        if (jadwalDalamDuaHari != null) {
+            daftarTerkirim.add(sendEmailReminder(jadwalDalamDuaHari, ReminderType.SECOND, reminderProvider));
+        }
 
-		return "reminder_pelayanan_summary";
-	}
+        model.addAttribute("daftarTerkirim", daftarTerkirim);
 
-	private ReminderTerkirim sendEmailReminder(JadwalPelayanan jadwal, ReminderType reminderType,
-			IReminderDataProvider reminderProvider) {
+        return "reminder_pelayanan_summary";
+    }
 
-		LOG.info("Mempersiapkan untuk mengirim email untuk jadwal: " + jadwal + ";Type: " + reminderType);
+    private ReminderTerkirim sendEmailReminder(JadwalPelayanan jadwal, ReminderType reminderType,
+                                               IReminderDataProvider reminderProvider) {
 
-		ReminderTerkirim reminderTerkirim = new ReminderTerkirim();
-		reminderTerkirim.setTanggal(jadwal.getTanggal());
+        LOG.info("Mempersiapkan untuk mengirim email untuk jadwal: " + jadwal + ";Type: " + reminderType);
 
-		Map<Orang, Set<Pelayanan>> daftarPelayananPerOrang = getDaftarPelayananPerOrang(jadwal);
+        ReminderTerkirim reminderTerkirim = new ReminderTerkirim();
+        reminderTerkirim.setTanggal(jadwal.getTanggal());
 
-		Set<Orang> missingEmails = new HashSet<Orang>();
-		for (Entry<Orang, Set<Pelayanan>> pelayananPerOrang : daftarPelayananPerOrang.entrySet()) {
-			Orang petugas = pelayananPerOrang.getKey();
-			Set<Pelayanan> daftarJenisPelayanan = pelayananPerOrang.getValue();
+        Map<Orang, Set<Pelayanan>> daftarPelayananPerOrang = getDaftarPelayananPerOrang(jadwal);
 
-			if (perluKirimReminder(reminderType, daftarJenisPelayanan)) {
-				if (StringUtils.isEmpty(petugas.getEmail()) && petugas.getNama().length() > 2) {
-					missingEmails.add(petugas);
-					LOG.warning(petugas.getNama() + " tidak memiliki alamat email!!! Tidak bisa mengirim reminder.");
-					continue;
-				}
-				try {
-					if (!isReminderSent(jadwal, petugas, reminderType)) {
-						sendEmailReminderKeOrang(jadwal, petugas, daftarJenisPelayanan, reminderType, reminderProvider);
-						reminderDatastore.setReminderSent(jadwal, petugas.getEmail(), reminderType);
-						reminderTerkirim.getDaftarPetugas().add(petugas);
-					} else {
-						if (petugas != null && !petugas.toString().equals("")) {
-							LOG.info("Email ke " + petugas + " sudah pernah dikirim sebelumnya");
-						}
-					}
-				} catch (EmailSendFailedException e) {
-					// Has been checked before, that it exists
-					throw new IllegalStateException(e);
-				} catch (EntityNotFoundException e) {
-					// Has been checked before, that it exists
-					throw new IllegalStateException(e);
-				}
-			}
-		}
-		if (LOG.isLoggable(Level.FINE)) {
-			LOG.fine("Missing emails count: " + missingEmails.size());
-		}
-		if (missingEmails.size() > 0) {
-			sendInfoMissingEmails(missingEmails, reminderProvider);
-		}
+        Set<Orang> missingEmails = new HashSet<Orang>();
+        for (Entry<Orang, Set<Pelayanan>> pelayananPerOrang : daftarPelayananPerOrang.entrySet()) {
+            Orang petugas = pelayananPerOrang.getKey();
+            Set<Pelayanan> daftarJenisPelayanan = pelayananPerOrang.getValue();
 
-		return reminderTerkirim;
-	}
+            if (perluKirimReminder(reminderType, daftarJenisPelayanan)) {
+                if (StringUtils.isEmpty(petugas.getEmail()) && petugas.getNama().length() > 2) {
+                    missingEmails.add(petugas);
+                    LOG.warning(petugas.getNama() + " tidak memiliki alamat email!!! Tidak bisa mengirim reminder.");
+                    continue;
+                }
+                try {
+                    if (!isReminderSent(jadwal, petugas, reminderType)) {
+                        sendEmailReminderKeOrang(jadwal, petugas, daftarJenisPelayanan, reminderType, reminderProvider);
+                        reminderDatastore.setReminderSent(jadwal, petugas.getEmail(), reminderType);
+                        reminderTerkirim.getDaftarPetugas().add(petugas);
+                    } else {
+                        if (petugas != null && !petugas.toString().equals("")) {
+                            LOG.info("Email ke " + petugas + " sudah pernah dikirim sebelumnya");
+                        }
+                    }
+                } catch (EmailSendFailedException e) {
+                    // Has been checked before, that it exists
+                    throw new IllegalStateException(e);
+                } catch (EntityNotFoundException e) {
+                    // Has been checked before, that it exists
+                    throw new IllegalStateException(e);
+                }
+            }
+        }
+        if (LOG.isLoggable(Level.FINE)) {
+            LOG.fine("Missing emails count: " + missingEmails.size());
+        }
+        if (missingEmails.size() > 0) {
+            sendInfoMissingEmails(missingEmails, reminderProvider);
+        }
 
-	private void sendInfoMissingEmails(Set<Orang> missingEmails, IReminderDataProvider reminderProvider) {
-		String subject = "[WARN] Email petugas yang belum terdaftar!";
-		LOG.info("Mengirim info missing email: " + missingEmails);
+        return reminderTerkirim;
+    }
 
-		String info = "Email dari petugas-petugas berikut ini belum terdaftar:";
-		StringBuffer textMessage = new StringBuffer("Hallo " + reminderProvider.getAdmin().getNama() + ",\n\n");
-		textMessage.append(info + "\n");
-		for (Orang orang : missingEmails) {
-			textMessage.append("- " + orang.getNama() + "\n");
-		}
-		String googleSheetUrl = getGoogleSheetUrl(reminderProvider.getSheetIdDaftarAnggota());
-		textMessage.append("\nLink Daftar Anggota: " + googleSheetUrl);
-		textMessage.append("\n\n");
-		textMessage.append("Salam,\n");
-		textMessage.append("Mail Service Persekutuan");
+    private void sendInfoMissingEmails(Set<Orang> missingEmails, IReminderDataProvider reminderProvider) {
+        String subject = "[WARN] Email petugas yang belum terdaftar!";
+        LOG.info("Mengirim info missing email: " + missingEmails);
 
-		StringBuffer htmlMessage = new StringBuffer("Hallo " + reminderProvider.getAdmin().getNama() + ",<br/><br/>");
-		htmlMessage.append(info + "<br/>");
-		htmlMessage.append("<ul>");
-		for (Orang orang : missingEmails) {
-			htmlMessage.append("<li>" + orang.getNama() + "</li>");
-		}
-		htmlMessage.append("</ul>");
-		htmlMessage.append("<br/><br/>Link Daftar Anggota: <a href=\"" + googleSheetUrl + "\">Link</a>");
-		htmlMessage.append(
-				"<br/>Atau buka URL ini di browser kalau link tidak berfungsi: " + googleSheetUrl + "<br/><br/>");
-		htmlMessage.append("Salam,<br/>");
-		htmlMessage.append("Mail Service Persekutuan");
+        String info = "Email dari petugas-petugas berikut ini belum terdaftar:";
+        StringBuffer textMessage = new StringBuffer("Hallo " + reminderProvider.getAdmin().getNama() + ",\n\n");
+        textMessage.append(info + "\n");
+        for (Orang orang : missingEmails) {
+            textMessage.append("- " + orang.getNama() + "\n");
+        }
+        String googleSheetUrl = getGoogleSheetUrl(reminderProvider.getSheetIdDaftarAnggota());
+        textMessage.append("\nLink Daftar Anggota: " + googleSheetUrl);
+        textMessage.append("\n\n");
+        textMessage.append("Salam,\n");
+        textMessage.append("Mail Service Persekutuan");
 
-		MailjetEmailService emailService = (MailjetEmailService) getEmailService();
-		emailService.setSenderName(reminderProvider.getSenderName());
-		emailService.setSenderEmail(reminderProvider.getSenderEmail());
-		try {
-			LOG.info("Sending missing emails (" + missingEmails.size() + ") info to: " + reminderProvider.getAdmin());
-			emailService.sendEmail(subject, textMessage.toString(), htmlMessage.toString(),
-					Collections.singletonList(reminderProvider.getAdmin()));
-		} catch (EmailSendFailedException e) {
-			throw new IllegalStateException(e);
-		}
+        StringBuffer htmlMessage = new StringBuffer("Hallo " + reminderProvider.getAdmin().getNama() + ",<br/><br/>");
+        htmlMessage.append(info + "<br/>");
+        htmlMessage.append("<ul>");
+        for (Orang orang : missingEmails) {
+            htmlMessage.append("<li>" + orang.getNama() + "</li>");
+        }
+        htmlMessage.append("</ul>");
+        htmlMessage.append("<br/><br/>Link Daftar Anggota: <a href=\"" + googleSheetUrl + "\">Link</a>");
+        htmlMessage.append(
+                "<br/>Atau buka URL ini di browser kalau link tidak berfungsi: " + googleSheetUrl + "<br/><br/>");
+        htmlMessage.append("Salam,<br/>");
+        htmlMessage.append("Mail Service Persekutuan");
 
-	}
+        MailjetEmailService emailService = (MailjetEmailService) getEmailService();
+        emailService.setSenderName(reminderProvider.getSenderName());
+        emailService.setSenderEmail(reminderProvider.getSenderEmail());
+        try {
+            LOG.info("Sending missing emails (" + missingEmails.size() + ") info to: " + reminderProvider.getAdmin());
+            emailService.sendEmail(subject, textMessage.toString(), htmlMessage.toString(),
+                    Collections.singletonList(reminderProvider.getAdmin()));
+        } catch (EmailSendFailedException e) {
+            throw new IllegalStateException(e);
+        }
 
-	private String getGoogleSheetUrl(String sheetId) {
-		return "https://docs.google.com/spreadsheets/d/" + sheetId + "/edit";
-	}
+    }
 
-	/**
-	 * Reminder perlu dikirimkan untuk semua orang jika jenis reminder bukan
-	 * {@code ReminderType.SPECIAL}. Atau jika jenis reminder
-	 * {@code ReminderType.SPECIAL}, maka reminder hanya akan dikirim untuk yang
-	 * pelayanan MC atau Renungan.
-	 * 
-	 * @param reminderType
-	 * @param daftarJenisPelayanan
-	 * @return
-	 */
-	private boolean perluKirimReminder(ReminderType reminderType, Set<Pelayanan> daftarJenisPelayanan) {
-		return reminderType != ReminderType.SPECIAL || daftarJenisPelayanan.contains(Pelayanan.MC)
-				|| daftarJenisPelayanan.contains(Pelayanan.PEMIMPIN_RENUNGAN);
-	}
+    private String getGoogleSheetUrl(String sheetId) {
+        return "https://docs.google.com/spreadsheets/d/" + sheetId + "/edit";
+    }
 
-	private Map<Orang, Set<Pelayanan>> getDaftarPelayananPerOrang(JadwalPelayanan jadwal) {
-		Map<Orang, Set<Pelayanan>> daftarPelayananPerOrang = new HashMap<Orang, Set<Pelayanan>>();
-		for (Entry<Pelayanan, List<Orang>> pelayanan : jadwal.listPelayanan()) {
-			for (Orang orang : pelayanan.getValue()) {
-				Set<Pelayanan> daftarPelayanan = daftarPelayananPerOrang.get(orang);
-				if (daftarPelayanan == null) {
-					daftarPelayanan = new HashSet<>();
-					daftarPelayananPerOrang.put(orang, daftarPelayanan);
-				}
-				daftarPelayanan.add(pelayanan.getKey());
-			}
-		}
-		return daftarPelayananPerOrang;
-	}
+    /**
+     * Reminder perlu dikirimkan untuk semua orang jika jenis reminder bukan
+     * {@code ReminderType.SPECIAL}. Atau jika jenis reminder
+     * {@code ReminderType.SPECIAL}, maka reminder hanya akan dikirim untuk yang
+     * pelayanan MC atau Renungan.
+     *
+     * @param reminderType
+     * @param daftarJenisPelayanan
+     * @return
+     */
+    private boolean perluKirimReminder(ReminderType reminderType, Set<Pelayanan> daftarJenisPelayanan) {
+        return reminderType != ReminderType.SPECIAL || daftarJenisPelayanan.contains(Pelayanan.MC)
+                || daftarJenisPelayanan.contains(Pelayanan.PEMIMPIN_RENUNGAN);
+    }
 
-	private void sendEmailReminderKeOrang(JadwalPelayanan jadwal, Orang orang, Set<Pelayanan> daftarPelayanan,
-			ReminderType reminderType, IReminderDataProvider reminderProvider) throws EmailSendFailedException {
+    private Map<Orang, Set<Pelayanan>> getDaftarPelayananPerOrang(JadwalPelayanan jadwal) {
+        Map<Orang, Set<Pelayanan>> daftarPelayananPerOrang = new HashMap<Orang, Set<Pelayanan>>();
+        for (Entry<Pelayanan, List<Orang>> pelayanan : jadwal.listPelayanan()) {
+            for (Orang orang : pelayanan.getValue()) {
+                Set<Pelayanan> daftarPelayanan = daftarPelayananPerOrang.get(orang);
+                if (daftarPelayanan == null) {
+                    daftarPelayanan = new HashSet<>();
+                    daftarPelayananPerOrang.put(orang, daftarPelayanan);
+                }
+                daftarPelayanan.add(pelayanan.getKey());
+            }
+        }
+        return daftarPelayananPerOrang;
+    }
 
-		LOG.info("Mengirim email ke " + orang + " untuk jadwal: " + jadwal);
+    private void sendEmailReminderKeOrang(JadwalPelayanan jadwal, Orang orang, Set<Pelayanan> daftarPelayanan,
+                                          ReminderType reminderType, IReminderDataProvider reminderProvider) throws EmailSendFailedException {
 
-		String daftarPelayananAsString = "";
-		int index = 0;
-		for (Pelayanan pelayanan : daftarPelayanan) {
-			if (index++ != 0) {
-				daftarPelayananAsString += ", ";
-			}
-			daftarPelayananAsString += pelayanan.getNama();
-		}
-		String subject = reminderProvider.getMailSubject(reminderType, daftarPelayananAsString);
-		LOG.info("Mengirim email dengan subjek: " + subject);
+        LOG.info("Mengirim email ke " + orang + " untuk jadwal: " + jadwal);
 
-		String textMessage = reminderProvider.getMailText(jadwal, orang, daftarPelayananAsString);
+        String daftarPelayananAsString = "";
+        int index = 0;
+        for (Pelayanan pelayanan : daftarPelayanan) {
+            if (index++ != 0) {
+                daftarPelayananAsString += ", ";
+            }
+            daftarPelayananAsString += pelayanan.getNama();
+        }
+        String subject = reminderProvider.getMailSubject(reminderType, daftarPelayananAsString);
+        LOG.info("Mengirim email dengan subjek: " + subject);
 
-		String htmlMessage = reminderProvider.getMailTextHtml(jadwal, orang, daftarPelayananAsString);
-		if (reminderType == ReminderType.SPECIAL) {
-			String specialReminderFootnote = getSpecialReminderFootnote();
-			textMessage += "\n\n" + specialReminderFootnote;
-			htmlMessage += "<br/><br/>" + specialReminderFootnote;
-		}
+        String textMessage = reminderProvider.getMailText(jadwal, orang, daftarPelayananAsString);
 
-		MailjetEmailService emailService = (MailjetEmailService) getEmailService();
-		emailService.setSenderName(reminderProvider.getSenderName());
-		emailService.setSenderEmail(reminderProvider.getSenderEmail());
-		emailService.sendEmail(subject, textMessage, htmlMessage, Arrays.asList(orang));
-	}
+        String htmlMessage = reminderProvider.getMailTextHtml(jadwal, orang, daftarPelayananAsString);
+        if (reminderType == ReminderType.SPECIAL) {
+            String specialReminderFootnote = getSpecialReminderFootnote();
+            textMessage += "\n\n" + specialReminderFootnote;
+            htmlMessage += "<br/><br/>" + specialReminderFootnote;
+        }
 
-	private String getSpecialReminderFootnote() {
-		return "PS: SPECIAL Reminder dikirimkan supaya kamu punya cukup waktu untuk mempersiapkan";
-	}
+        MailjetEmailService emailService = (MailjetEmailService) getEmailService();
+        emailService.setSenderName(reminderProvider.getSenderName());
+        emailService.setSenderEmail(reminderProvider.getSenderEmail());
+        emailService.sendEmail(subject, textMessage, htmlMessage, Arrays.asList(orang));
+    }
 
-	private boolean isReminderSent(JadwalPelayanan jadwal, Orang orang, ReminderType reminderType) {
+    private String getSpecialReminderFootnote() {
+        return "PS: SPECIAL Reminder dikirimkan supaya kamu punya cukup waktu untuk mempersiapkan";
+    }
 
-		try {
-			return reminderDatastore.isReminderSent(jadwal, orang.getEmail(), reminderType);
-		} catch (EntityNotFoundException e) {
-			reminderDatastore.addReminderEntity(jadwal, orang.getEmail(), reminderType);
-			return false;
-		}
-	}
+    private boolean isReminderSent(JadwalPelayanan jadwal, Orang orang, ReminderType reminderType) {
 
-	public IEmailService getEmailService() {
-		if (emailService == null) {
-			emailService = MailjetEmailService.createEmailService();
-		}
-		return emailService;
-	}
+        try {
+            return reminderDatastore.isReminderSent(jadwal, orang.getEmail(), reminderType);
+        } catch (EntityNotFoundException e) {
+            reminderDatastore.addReminderEntity(jadwal, orang.getEmail(), reminderType);
+            return false;
+        }
+    }
+
+    public IEmailService getEmailService() {
+        if (emailService == null) {
+            emailService = MailjetEmailService.createEmailService();
+        }
+        return emailService;
+    }
 
 }
