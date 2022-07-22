@@ -15,4 +15,5 @@
       <!-- Used to handle bounced mail notifications. -->
       <service>mail_bounce</service>
     </inbound-services>
+    <sessions-enabled>true</sessions-enabled>
 </appengine-web-app>
